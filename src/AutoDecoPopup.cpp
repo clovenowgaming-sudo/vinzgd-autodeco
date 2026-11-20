@@ -1,10 +1,13 @@
 #include "AutoDecoPopup.hpp"
 #include <Geode/binding/ButtonSprite.hpp>
 #include <vector>
+#include <algorithm>
 
 using namespace geode::prelude;
 
 namespace autodeco {
+
+    static constexpr int kPopupTag = 0x4150DEC1;
 
     static std::vector<std::string> const kThemeOrder = {
         "auto", "neon", "toxic", "fire", "ice", "space", "monochrome", "cosmic_moon", "retrowave"
@@ -12,7 +15,7 @@ namespace autodeco {
 
     AutoDecoPopup* AutoDecoPopup::create(LevelEditorLayer* lel, EditorUI* ui) {
         auto ret = new AutoDecoPopup();
-        if (ret && ret->initAnchored(360.f, 220.f, lel, ui)) {
+        if (ret && ret->init(lel, ui)) {
             ret->autorelease();
             return ret;
         }
@@ -20,28 +23,71 @@ namespace autodeco {
         return nullptr;
     }
 
-    bool AutoDecoPopup::setup(LevelEditorLayer* lel, EditorUI* ui) {
+    void AutoDecoPopup::showOn(cocos2d::CCNode* parent) {
+        if (!parent) return;
+        if (auto existing = parent->getChildByTag(kPopupTag)) {
+            existing->removeFromParent();
+        }
+        this->setTag(kPopupTag);
+        parent->addChild(this, 1000);
+    }
+
+    bool AutoDecoPopup::init(LevelEditorLayer* lel, EditorUI* ui) {
         m_lel = lel;
         m_ui = ui;
-        this->setTitle("AutoDeco Beat Sync");
+
+        auto winSize = CCDirector::sharedDirector()->getWinSize();
+
+        // Full-screen dim background that eats touches so clicks don't
+        // fall through to the editor underneath.
+        if (!CCLayerColor::initWithColor({0, 0, 0, 160}, winSize.width, winSize.height)) {
+            return false;
+        }
+        this->setTouchEnabled(true);
+        this->setKeypadEnabled(true);
 
         m_selectedTheme = Mod::get()->getSettingValue<std::string>("theme");
 
-        auto winSize = m_mainLayer->getContentSize();
+        float panelW = 360.f, panelH = 260.f;
         float centerX = winSize.width / 2.f;
-        float topY = winSize.height - 60.f;
+        float centerY = winSize.height / 2.f;
+
+        m_panel = CCLayerColor::create({20, 20, 30, 235}, panelW, panelH);
+        m_panel->setPosition({centerX - panelW / 2.f, centerY - panelH / 2.f});
+        m_panel->setAnchorPoint({0.f, 0.f});
+        this->addChild(m_panel);
+
+        auto border = CCLayerColor::create({120, 90, 220, 255}, panelW, panelH);
+        border->setPosition(m_panel->getPosition() - ccp(2.f, 2.f));
+        border->setContentSize({panelW + 4.f, panelH + 4.f});
+        this->addChild(border, -1);
+
+        auto title = CCLabelBMFont::create("AutoDeco Beat Sync", "goldFont.fnt");
+        title->setScale(0.6f);
+        title->setPosition({panelW / 2.f, panelH - 20.f});
+        m_panel->addChild(title);
+
+        auto closeBtnSpr = ButtonSprite::create("X", "bigFont.fnt", "GJ_button_06.png", 0.6f);
+        auto closeBtn = CCMenuItemSpriteExtra::create(closeBtnSpr, this, menu_selector(AutoDecoPopup::onClose));
+        closeBtn->setPosition({panelW - 20.f, panelH - 20.f});
+        auto closeMenu = CCMenu::create();
+        closeMenu->addChild(closeBtn);
+        closeMenu->setPosition({0.f, 0.f});
+        m_panel->addChild(closeMenu);
+
+        float topY = panelH - 50.f;
 
         auto makeRow = [&](char const* labelText, float y, std::string const& defaultVal) -> CCTextInputNode* {
             auto label = CCLabelBMFont::create(labelText, "bigFont.fnt");
             label->setScale(0.35f);
             label->setAnchorPoint({1.f, 0.5f});
-            label->setPosition({centerX - 10.f, y});
-            m_mainLayer->addChild(label);
+            label->setPosition({panelW / 2.f - 10.f, y});
+            m_panel->addChild(label);
 
             auto input = CCTextInputNode::create(100.f, 30.f, "0", "bigFont.fnt");
-            input->setPosition({centerX + 55.f, y});
+            input->setPosition({panelW / 2.f + 55.f, y});
             input->setString(defaultVal.c_str());
-            m_mainLayer->addChild(input);
+            m_panel->addChild(input);
             return input;
         };
 
@@ -54,42 +100,52 @@ namespace autodeco {
         auto themeLabel = CCLabelBMFont::create("Theme:", "bigFont.fnt");
         themeLabel->setScale(0.35f);
         themeLabel->setAnchorPoint({1.f, 0.5f});
-        themeLabel->setPosition({centerX - 10.f, topY - 144.f});
-        m_mainLayer->addChild(themeLabel);
+        themeLabel->setPosition({panelW / 2.f - 10.f, topY - 144.f});
+        m_panel->addChild(themeLabel);
 
         m_themeLabel = CCLabelBMFont::create("auto", "goldFont.fnt");
         m_themeLabel->setScale(0.45f);
-        m_themeLabel->setPosition({centerX + 55.f, topY - 144.f});
-        m_mainLayer->addChild(m_themeLabel);
+        m_themeLabel->setPosition({panelW / 2.f + 55.f, topY - 144.f});
+        m_panel->addChild(m_themeLabel);
         refreshThemeLabel();
 
         auto cycleBtnSpr = ButtonSprite::create(">", "bigFont.fnt", "GJ_button_01.png", 0.6f);
         auto cycleBtn = CCMenuItemSpriteExtra::create(
             cycleBtnSpr, this, menu_selector(AutoDecoPopup::onCycleTheme)
         );
-        cycleBtn->setPosition({centerX + 120.f, topY - 144.f});
+        cycleBtn->setPosition({panelW / 2.f + 120.f, topY - 144.f});
         auto cycleMenu = CCMenu::create();
         cycleMenu->addChild(cycleBtn);
         cycleMenu->setPosition({0.f, 0.f});
-        m_mainLayer->addChild(cycleMenu);
+        m_panel->addChild(cycleMenu);
 
         // Generate button
         auto genBtnSpr = ButtonSprite::create("Generate Deco", "bigFont.fnt", "GJ_button_02.png", 0.9f);
         auto genBtn = CCMenuItemSpriteExtra::create(
             genBtnSpr, this, menu_selector(AutoDecoPopup::onGenerate)
         );
-        genBtn->setPosition({centerX, 40.f});
+        genBtn->setPosition({panelW / 2.f, 40.f});
         auto genMenu = CCMenu::create();
         genMenu->addChild(genBtn);
         genMenu->setPosition({0.f, 0.f});
-        m_mainLayer->addChild(genMenu);
+        m_panel->addChild(genMenu);
 
         m_statusLabel = CCLabelBMFont::create("Isi BPM/panjang lagu, pilih tema, lalu Generate.", "chatFont.fnt");
         m_statusLabel->setScale(0.5f);
-        m_statusLabel->setPosition({centerX, 70.f});
-        m_mainLayer->addChild(m_statusLabel);
+        m_statusLabel->setPosition({panelW / 2.f, 20.f});
+        m_panel->addChild(m_statusLabel);
 
         return true;
+    }
+
+    bool AutoDecoPopup::ccTouchBegan(CCTouch*, CCEvent*) {
+        // Swallow every touch on the dim background so clicks don't pass
+        // through to the editor underneath while this panel is open.
+        return true;
+    }
+
+    void AutoDecoPopup::onClose(CCObject*) {
+        this->removeFromParent();
     }
 
     void AutoDecoPopup::refreshThemeLabel() {

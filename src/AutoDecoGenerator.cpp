@@ -1,4 +1,5 @@
 #include "AutoDecoGenerator.hpp"
+#include <Geode/binding/GJEffectManager.hpp>
 #include <cmath>
 #include <algorithm>
 
@@ -99,22 +100,11 @@ namespace autodeco {
     std::string detectThemeFromLevel(LevelEditorLayer* lel) {
         if (!lel) return "neon";
 
-        // Best-effort read of the editor's current background color via
-        // the base game layer's background CCLayerColor. If this member
-        // doesn't exist on the Geode SDK version you're building against,
-        // this file still compiles as long as the #if below falls through
-        // to the default — just delete the guarded block and keep "neon".
-        ccColor3B bg{0, 0, 0};
-        bool gotColor = false;
-
-        #if defined(GEODE_IS_WINDOWS) || defined(GEODE_IS_ANDROID) || defined(GEODE_IS_MACOS)
-        if (lel->m_backgroundLayer) {
-            bg = lel->m_backgroundLayer->getColor();
-            gotColor = true;
-        }
-        #endif
-
-        if (!gotColor) return "neon";
+        // Read the editor's current background color straight from the
+        // level's effect manager (channel 1000 = background). This is the
+        // same place color triggers and the BG color picker write to.
+        if (!lel->m_effectManager) return "neon";
+        ccColor3B bg = lel->m_effectManager->colorForIndex(1000);
 
         float h = hueOf(bg);
         float brightness = (bg.r + bg.g + bg.b) / (3.f * 255.f);
@@ -175,8 +165,8 @@ namespace autodeco {
         // channel/trigger — good enough visually, but it won't react to
         // in-level color triggers the way channel-linked objects would.
         ccColor3B tint{255, 255, 255};
-        if (params.autoColorMatch && lel->m_backgroundLayer) {
-            ccColor3B bg = lel->m_backgroundLayer->getColor();
+        if (params.autoColorMatch && lel->m_effectManager) {
+            ccColor3B bg = lel->m_effectManager->colorForIndex(1000);
             // Push toward a brighter, more saturated version of the bg hue
             // so deco reads as an accent rather than blending invisibly in.
             tint.r = static_cast<GLubyte>(std::min(255, bg.r + 60));
@@ -200,7 +190,7 @@ namespace autodeco {
                 : 0.f;
             float y = groundBaselineY + yJitter;
 
-            auto* obj = ui->createObject(objID, ccp(x, y), false);
+            auto* obj = ui->createObject(objID, ccp(x, y));
             if (!obj) continue;
 
             if (params.varyScaleRotation) {
@@ -217,7 +207,7 @@ namespace autodeco {
             // higher up so the deco fills more than just the ground line.
             if (i % 8 == 0 && !theme->particleObjIDs.empty()) {
                 float py = groundBaselineY + params.heightRange * (0.6f + CCRANDOM_0_1() * 0.4f);
-                auto* particle = ui->createObject(pickFrom(theme->particleObjIDs, i / 8), ccp(x, py), false);
+                auto* particle = ui->createObject(pickFrom(theme->particleObjIDs, i / 8), ccp(x, py));
                 if (particle) {
                     if (params.autoColorMatch) particle->setColor(tint);
                     particle->setScale(0.7f + CCRANDOM_0_1() * 0.5f);

@@ -45,7 +45,7 @@ class $modify(AutoDecoEditorUI, EditorUI) {
         }
         auto popup = AutoDecoPopup::create(lel, this);
         if (popup) {
-            popup->show();
+            popup->showOn(this);
         }
     }
 };

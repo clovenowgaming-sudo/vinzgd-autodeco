@@ -1,6 +1,6 @@
 # AutoDeco Beat Sync (Geode mod)
 
-Target: **Geometry Dash 2.2081**, **Geode SDK v4.3.0** (match the SDK you
+Target: **Geometry Dash 2.2081**, **Geode SDK v5.11.2** (match the SDK you
 already use for your geode-llm project — change the `geode`/`gd` fields in
 `mod.json` if you're on a different version).
 

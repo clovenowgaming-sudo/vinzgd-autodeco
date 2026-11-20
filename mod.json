@@ -1,0 +1,96 @@
+{
+    "geode": "v4.3.0",
+    "gd": {
+        "android": "2.2081",
+        "win": "2.2081",
+        "mac": "2.2081"
+    },
+    "version": "v1.0.0",
+    "id": "vinzgd.autodeco",
+    "name": "AutoDeco Beat Sync",
+    "developer": "VinzGD",
+    "description": "Auto-generate modern decoration that lines up with the song's beat and matches the level's current theme.",
+    "repository": "https://github.com/VinzGD/autodeco",
+    "tags": ["editor", "enhancement", "utility"],
+    "settings": {
+        "bpm": {
+            "name": "Song BPM",
+            "description": "Tempo lagu (beat per minute). Isi sesuai BPM asli lagunya biar deco pas ketukan.",
+            "type": "float",
+            "default": 128.0,
+            "min": 40.0,
+            "max": 300.0
+        },
+        "song-length-seconds": {
+            "name": "Song Length (seconds)",
+            "description": "Durasi lagu / bagian level yang mau di-deco, dalam detik.",
+            "type": "float",
+            "default": 60.0,
+            "min": 1.0,
+            "max": 1800.0
+        },
+        "offset-ms": {
+            "name": "Beat Offset (ms)",
+            "description": "Offset ketukan pertama dari detik ke-0, kalau lagunya ada intro sunyi.",
+            "type": "float",
+            "default": 0.0,
+            "min": -5000.0,
+            "max": 5000.0
+        },
+        "start-x": {
+            "name": "Start X (editor units)",
+            "description": "Posisi X awal di editor tempat deco mulai digenerate (biasanya 0 atau posisi awal part yang mau di-deco).",
+            "type": "float",
+            "default": 0.0,
+            "min": 0.0,
+            "max": 999999.0
+        },
+        "theme": {
+            "name": "Deco Theme",
+            "description": "Tema deco. Pilih 'auto' biar mod nebak dari warna BG/Ground level sekarang.",
+            "type": "string",
+            "default": "auto",
+            "enum": ["auto", "neon", "toxic", "fire", "ice", "space", "monochrome", "cosmic_moon", "retrowave"]
+        },
+        "beat-density": {
+            "name": "Deco Density",
+            "description": "Seberapa sering deco muncul relatif ke ketukan.",
+            "type": "string",
+            "default": "every-beat",
+            "enum": ["every-beat", "every-half-beat", "every-2-beats", "every-4-beats"]
+        },
+        "auto-color-match": {
+            "name": "Match Level Colors",
+            "description": "Deco otomatis dikasih warna dari channel BG/Ground level ini (bukan warna default objectnya).",
+            "type": "bool",
+            "default": true
+        },
+        "vary-scale-rotation": {
+            "name": "Vary Scale & Rotation",
+            "description": "Random scale kecil dan rotasi tiap deco biar kesannya modern & gak monoton/berbaris kaku.",
+            "type": "bool",
+            "default": true
+        },
+        "deco-height-range": {
+            "name": "Deco Height Range (units)",
+            "description": "Seberapa jauh deco disebar ke atas dari ground, biar ngisi background bukan cuma di lantai.",
+            "type": "float",
+            "default": 180.0,
+            "min": 0.0,
+            "max": 600.0
+        },
+        "units-per-second": {
+            "name": "Editor Units / Second",
+            "description": "Kecepatan gerak di editor pada speed portal yang kepake di part itu (default ~311.58 buat Normal Speed/1x). Ganti kalau part-nya pake speed portal lain (misal Double Speed = 2x nilai ini) biar deco tetap pas ketukan.",
+            "type": "float",
+            "default": 311.58,
+            "min": 50.0,
+            "max": 2000.0
+        }
+    },
+    "resources": {
+        "spritesheets": {},
+        "sprites": [],
+        "fonts": {}
+    }
+}

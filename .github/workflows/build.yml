@@ -1,0 +1,50 @@
+name: Build Geode mod
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            name: Windows
+            platform: win
+          - os: macos-latest
+            name: macOS
+            platform: mac
+          - os: ubuntu-latest
+            name: Android32
+            platform: android32
+          - os: ubuntu-latest
+            name: Android64
+            platform: android64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # Official Geode SDK build action: sets up the Geode CLI + SDK for
+      # the chosen platform and runs the actual build. If this action's
+      # inputs/name change on your end, check the latest README at
+      # https://github.com/geode-sdk/build-geode-mod for the current usage.
+      - name: Build with Geode
+        uses: geode-sdk/build-geode-mod@main
+        with:
+          platform: ${{ matrix.platform }}
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AutoDecoBeatSync-${{ matrix.name }}
+          path: build/*.geode
+          if-no-files-found: warn
